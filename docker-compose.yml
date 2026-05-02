@@ -2,8 +2,8 @@ version: "3.8"
 
 services:
   nginx:
-    build: ./nginx
-    image: nginx
+    build: 
+      context: ./nginx
     container_name: "nginx_cont"
     ports:
       - "80:80"
@@ -11,12 +11,11 @@ services:
     depends_on:
       - django_app
     networks:
-      - notes-app-nw
+      - mynet
 
   django_app:
     build:
       context: .
-    image: django_app
     container_name: "django_cont"
     ports:
       - "8000:8000"
@@ -24,25 +23,20 @@ services:
     env_file:
       - ".env"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     restart: always
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/admin || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
     networks:
-      - notes-app-nw
+      - mynet
 
   db:
-    image: mysql
+    image: mysql:5.7
     container_name: "db_cont"
     environment:
       - MYSQL_ROOT_PASSWORD=root
       - MYSQL_DATABASE=test_db
     volumes:
-      - ./data/mysql/db:/var/lib/mysql
+      - mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 10s
@@ -50,7 +44,10 @@ services:
       retries: 5
       start_period: 60s
     networks:
-      - notes-app-nw
+      - mynet
+
+volumes:
+  mysql-data:
 
 networks:
-  notes-app-nw:
+  mynet:
